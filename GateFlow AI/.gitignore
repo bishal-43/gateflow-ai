@@ -1,0 +1,27 @@
+# Secrets — never commit these
+.env
+
+# ChromaDB persisted data
+gateflow_db/
+
+# EasyOCR downloaded models
+.EasyOCR/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Preview images generated during testing
+page_preview.png
+
+# OS files
+.DS_Store
+Thumbs.db
