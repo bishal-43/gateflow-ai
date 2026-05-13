@@ -6,7 +6,7 @@ from services.auth_service import build_google_auth_url, google_callback, login_
 
 
 async def register(db: AsyncSession, data: RegisterRequest) -> TokenResponse:
-    return await register_user(db, data.full_name, data.email, data.password, data.role)
+    return await register_user(db, data.full_name, data.email, data.password)
 
 
 async def login(db: AsyncSession, data: LoginRequest) -> TokenResponse:

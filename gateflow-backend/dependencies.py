@@ -8,16 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from database import get_db
+from models.user import User
 from security import decode_token, is_token_blacklisted
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: AsyncSession = Depends(get_db),
-):
-    """Validate Bearer JWT and return the authenticated User."""
+async def user_from_access_token(db: AsyncSession, token: str) -> User:
+    """
+    Validate a raw access JWT (e.g. WebSocket ?token=...) and return the User.
+    Same rules as HTTP Bearer auth: access type only, blacklist check, active user.
+    """
     credentials_exc = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -50,7 +51,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    from models.user import User
     try:
         uid = UUID(user_id)
     except ValueError:
@@ -64,6 +64,14 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Account is deactivated")
 
     return user
+
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate Bearer JWT and return the authenticated User."""
+    return await user_from_access_token(db, token)
 
 
 def require_roles(*roles: str):

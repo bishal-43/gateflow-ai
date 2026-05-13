@@ -60,7 +60,7 @@ async def create_request(
 async def approve_request(
     walkin_id: UUID,
     db:       AsyncSession = Depends(get_db),
-    approver: User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    approver: User         = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
     return await ctrl.approve(db, walkin_id, approver)
 
@@ -78,7 +78,7 @@ async def reject_request(
     walkin_id: UUID,
     data:      WalkInRejectRequest = WalkInRejectRequest(),
     db:        AsyncSession        = Depends(get_db),
-    approver:  User                = Depends(require_roles("ORGANIZER", "ADMIN")),
+    approver:  User                = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
     return await ctrl.reject(db, walkin_id, data, approver)
 
@@ -91,6 +91,6 @@ async def reject_request(
 async def list_pending(
     space_id: Optional[UUID] = Query(None, description="Filter by a specific space"),
     db:   AsyncSession = Depends(get_db),
-    user: User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User         = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
     return await ctrl.pending(db, space_id, user)

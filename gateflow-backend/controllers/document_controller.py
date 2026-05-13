@@ -13,8 +13,8 @@ async def upload(db: AsyncSession, space_id: UUID, file: UploadFile, user: User)
     return await upload_document(db, space_id, file, user)
 
 
-async def list_all(db: AsyncSession, space_id: UUID) -> DocumentListResponse:
-    return await list_documents(db, space_id)
+async def list_all(db: AsyncSession, space_id: UUID, user: User) -> DocumentListResponse:
+    return await list_documents(db, space_id, user)
 
 
 async def delete(db: AsyncSession, doc_id: UUID, user: User) -> None:

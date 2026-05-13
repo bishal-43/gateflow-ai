@@ -27,7 +27,7 @@ async def upload_document(
     space_id: UUID       = Query(..., description="Space this document belongs to"),
     file:     UploadFile = File(...),
     db:       AsyncSession = Depends(get_db),
-    user:     User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user:     User         = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
     return await ctrl.upload(db, space_id, file, user)
 
@@ -40,9 +40,9 @@ async def upload_document(
 async def list_documents(
     space_id: UUID = Query(...),
     db:   AsyncSession = Depends(get_db),
-    _:    User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user:     User         = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    return await ctrl.list_all(db, space_id)
+    return await ctrl.list_all(db, space_id, user)
 
 
 @router.delete(
@@ -54,6 +54,6 @@ async def list_documents(
 async def delete_document(
     doc_id: UUID,
     db:   AsyncSession = Depends(get_db),
-    user: User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User         = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
     await ctrl.delete(db, doc_id, user)

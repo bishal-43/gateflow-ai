@@ -30,6 +30,7 @@ from schemas.walkin import (
     WalkInResponse,
 )
 from services.invite_service import generate_invite_token, generate_qr_token, _link
+from services.space_service import ensure_space_access
 from utils.logger import logger
 
 _PROOF_DIR = "uploads/walkin"
@@ -125,17 +126,18 @@ async def approve_walkin_request(
     if approver.role != UserRole.ADMIN and space.owner_id != approver.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "You do not own this space")
 
-    # Walk-in invite is valid from now until end of today (or space end_time if sooner)
+    # Walk-in invite: fixed duration from approval (timezone-safe), capped by space end if sooner
     now = datetime.now(timezone.utc)
-    end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=0)
-    space_end = space.end_time
-    if space_end and space_end.tzinfo is None:
-        space_end = space_end.replace(tzinfo=timezone.utc)
-    valid_until = min(end_of_day, space_end) if space_end else end_of_day
+    valid_until = now + timedelta(hours=12)
+    if space.end_time:
+        space_end = space.end_time if space.end_time.tzinfo else space.end_time.replace(tzinfo=timezone.utc)
+        valid_until = min(valid_until, space_end)
 
     # Build invite — reuses the SAME token generation from invite_service
     invite_id = uuid.uuid4()
-    invite_token = generate_invite_token(str(invite_id), str(req.space_id), InviteType.WALKIN, valid_until)
+    invite_token = generate_invite_token(
+        str(invite_id), str(req.space_id), InviteType.WALKIN, now, valid_until,
+    )
     qr_token = generate_qr_token()
 
     invite = Invite(
@@ -205,6 +207,8 @@ async def get_pending_requests(
         filters.append(WalkInRequest.space_id.in_(owned_space_ids))
 
     if space_id:
+        if user.role != UserRole.ADMIN:
+            await ensure_space_access(db, space_id, user)
         filters.append(WalkInRequest.space_id == space_id)
 
     rows = (await db.execute(

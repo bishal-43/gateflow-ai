@@ -18,7 +18,6 @@ REGISTER_PAYLOAD = {
     "full_name": "Test User",
     "email":     "test@example.com",
     "password":  "securepassword123",
-    "role":      "ORGANIZER",
 }
 
 
@@ -86,3 +85,10 @@ async def test_refresh_token(client: AsyncClient):
     response = await client.post("/auth/refresh", json={"refresh_token": refresh_token})
     assert response.status_code == 200
     assert "access_token" in response.json()
+
+
+async def test_register_rejects_client_supplied_role(client: AsyncClient):
+    """Public registration must not accept a role field (prevents privilege escalation)."""
+    bad = {**REGISTER_PAYLOAD, "email": "norole@example.com", "role": "ADMIN"}
+    response = await client.post("/auth/register", json=bad)
+    assert response.status_code == 422

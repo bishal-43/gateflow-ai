@@ -1,22 +1,16 @@
 """schemas/auth.py — Auth request/response schemas"""
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from schemas.common import MessageResponse  # noqa: F401 — re-exported for convenience
 
 
 class RegisterRequest(BaseModel):
+    """Public registration — role is always assigned server-side (ORGANIZER)."""
+
+    model_config = ConfigDict(extra="forbid")
+
     full_name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
-    role: str = Field(default="ORGANIZER")
-
-    @field_validator("role")
-    @classmethod
-    def valid_role(cls, v: str) -> str:
-        allowed = {"ORGANIZER", "RESIDENT", "GUARD", "ADMIN"}
-        upper = v.upper()
-        if upper not in allowed:
-            raise ValueError(f"role must be one of {sorted(allowed)}")
-        return upper
 
 
 class LoginRequest(BaseModel):

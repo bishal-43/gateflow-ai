@@ -17,5 +17,5 @@ async def scan(data: ExitScanRequest, db: AsyncSession = Depends(get_db), guard:
 
 
 @router.get("/occupancy", response_model=OccupancyResponse)
-async def occupancy(space_id: UUID = Query(...), db: AsyncSession = Depends(get_db), _: User = Depends(require_roles("GUARD", "ORGANIZER", "RESIDENT", "ADMIN"))):
-    return await ctrl.occupancy(db, space_id)
+async def occupancy(space_id: UUID = Query(...), db: AsyncSession = Depends(get_db), user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN"))):
+    return await ctrl.occupancy(db, space_id, user)

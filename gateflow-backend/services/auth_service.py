@@ -54,12 +54,13 @@ async def _by_google_id(db: AsyncSession, gid: str) -> User | None:
     return r.scalar_one_or_none()
 
 
-async def register_user(db: AsyncSession, full_name: str, email: str, password: str, role: str = "ORGANIZER") -> TokenResponse:
+async def register_user(db: AsyncSession, full_name: str, email: str, password: str) -> TokenResponse:
     email = email.lower().strip()
     if await _by_email(db, email):
         raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
+    # Role is never taken from the client — prevents privilege escalation (ADMIN/GUARD).
     user = User(email=email, full_name=full_name.strip(), hashed_password=hash_password(password),
-                role=UserRole(role.upper()), auth_provider=AuthProvider.EMAIL, is_verified=False)
+                role=UserRole.ORGANIZER, auth_provider=AuthProvider.EMAIL, is_verified=False)
     db.add(user)
     await db.commit()
     await db.refresh(user)

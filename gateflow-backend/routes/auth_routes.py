@@ -19,7 +19,8 @@ router = APIRouter()
     summary="Register a new user",
     responses={409: {"model": ErrorResponse, "description": "Email already registered"}},
 )
-async def register(data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     return await ctrl.register(db, data)
 
 
@@ -54,7 +55,8 @@ async def logout(
     summary="Exchange refresh token for new access + refresh tokens",
     responses={401: {"model": ErrorResponse, "description": "Invalid or expired refresh token"}},
 )
-async def refresh(data: RefreshRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("10/minute")
+async def refresh(request: Request, data: RefreshRequest, db: AsyncSession = Depends(get_db)):
     return await ctrl.refresh(db, data)
 
 

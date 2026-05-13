@@ -1,5 +1,7 @@
 """services/visitor_service.py — Visitor access (no login required)"""
 import base64, io
+from datetime import datetime, timezone
+
 from fastapi import HTTPException, status
 from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +38,23 @@ def _validate_token(token: str) -> dict:
     return payload
 
 
+def _require_invite_date_window(invite: Invite) -> None:
+    """DB is source of truth for invite validity — do not rely on JWT exp alone."""
+    now = datetime.now(timezone.utc)
+    vf = invite.valid_from if invite.valid_from.tzinfo else invite.valid_from.replace(tzinfo=timezone.utc)
+    vu = invite.valid_until if invite.valid_until.tzinfo else invite.valid_until.replace(tzinfo=timezone.utc)
+    if now < vf:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"This invite is not active yet — valid from {vf.isoformat()}",
+        )
+    if now > vu:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            f"This invite has expired — valid until {vu.isoformat()}",
+        )
+
+
 async def _load(db: AsyncSession, invite_id: str) -> tuple[Invite, Space]:
     invite = await db.get(Invite, invite_id)
     if invite is None:
@@ -49,6 +68,7 @@ async def _load(db: AsyncSession, invite_id: str) -> tuple[Invite, Space]:
     space = await db.get(Space, invite.space_id)
     if space is None or not space.is_active:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Space is no longer active")
+    _require_invite_date_window(invite)
     return invite, space
 
 

@@ -1,6 +1,6 @@
 """websocket/dashboard_ws.py — Live dashboard WebSocket
 
-Clients connect to:  ws://host/ws/dashboard/{space_id}
+Clients connect to:  ws://host/ws/dashboard/{space_id}?token=<access_jwt>
 
 After connection the server pushes JSON whenever:
   - A visitor enters    → { "event": "ENTRY", ... }

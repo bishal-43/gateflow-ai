@@ -23,9 +23,9 @@ router = APIRouter()
 async def stats(
     space_id: UUID = Query(..., description="Space to query"),
     db:   AsyncSession = Depends(get_db),
-    _:    User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    return await ctrl.stats(db, space_id)
+    return await ctrl.stats(db, space_id, user)
 
 
 @router.get(
@@ -35,9 +35,9 @@ async def stats(
 async def occupancy(
     space_id: UUID = Query(...),
     db: AsyncSession = Depends(get_db),
-    _:  User         = Depends(require_roles("ORGANIZER", "ADMIN", "GUARD")),
+    user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    return await ctrl.occupancy(db, space_id)
+    return await ctrl.occupancy(db, space_id, user)
 
 
 @router.get(
@@ -48,9 +48,9 @@ async def entries(
     space_id: UUID = Query(...),
     limit:    int  = Query(50, ge=1, le=200, description="Max rows to return"),
     db: AsyncSession = Depends(get_db),
-    _:  User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    return await ctrl.entries(db, space_id, limit)
+    return await ctrl.entries(db, space_id, limit, user)
 
 
 @router.get(
@@ -60,9 +60,9 @@ async def entries(
 async def walkins(
     space_id: UUID = Query(...),
     db: AsyncSession = Depends(get_db),
-    _:  User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    return await ctrl.walkins(db, space_id)
+    return await ctrl.walkins(db, space_id, user)
 
 
 @router.get(
@@ -72,6 +72,6 @@ async def walkins(
 async def overstays(
     space_id: UUID = Query(...),
     db: AsyncSession = Depends(get_db),
-    _:  User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    return await ctrl.overstays(db, space_id)
+    return await ctrl.overstays(db, space_id, user)

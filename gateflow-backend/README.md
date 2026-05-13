@@ -185,7 +185,7 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5174
 
 ### Auth
 
-- `POST /auth/register` - register new user
+- `POST /auth/register` - register new user (role is always **ORGANIZER**; no client-supplied role)
 - `POST /auth/login` - login and get tokens
 - `POST /auth/logout` - revoke tokens
 - `POST /auth/refresh` - rotate access/refresh tokens

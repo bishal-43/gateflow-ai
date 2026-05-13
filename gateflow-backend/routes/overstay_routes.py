@@ -20,10 +20,10 @@ router = APIRouter()
 )
 async def active_overstays(
     space_id: UUID = Query(...),
-    db:  AsyncSession = Depends(get_db),
-    _:   User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    db:   AsyncSession = Depends(get_db),
+    user: User         = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    sessions = await ctrl.active(db, space_id)
+    sessions = await ctrl.active(db, space_id, user)
     return OverstaysResponse(
         space_id=space_id,
         total=len(sessions),
@@ -49,9 +49,9 @@ async def active_overstays(
 async def resolve_overstay(
     session_id: UUID,
     db: AsyncSession = Depends(get_db),
-    _:  User         = Depends(require_roles("ORGANIZER", "ADMIN")),
+    user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN")),
 ):
-    session = await ctrl.resolve(db, session_id)
+    session = await ctrl.resolve(db, session_id, user)
     return OverstayItem(
         session_id=session.id, visitor_name=session.visitor_name,
         entry_time=session.entry_time, allowed_until=session.allowed_until,

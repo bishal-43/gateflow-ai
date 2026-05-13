@@ -17,5 +17,5 @@ async def scan(data: EntryScanRequest, db: AsyncSession = Depends(get_db), guard
 
 
 @router.get("/active", response_model=ActiveVisitorsResponse)
-async def active(space_id: UUID = Query(...), db: AsyncSession = Depends(get_db), _: User = Depends(require_roles("GUARD", "ORGANIZER", "RESIDENT", "ADMIN"))):
-    return await ctrl.active_visitors(db, space_id)
+async def active(space_id: UUID = Query(...), db: AsyncSession = Depends(get_db), user: User = Depends(require_roles("ORGANIZER", "RESIDENT", "ADMIN"))):
+    return await ctrl.active_visitors(db, space_id, user)

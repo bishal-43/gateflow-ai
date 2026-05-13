@@ -22,6 +22,15 @@ async def _get_space(db: AsyncSession, space_id: UUID, user: User) -> Space:
     return space
 
 
+async def ensure_space_access(db: AsyncSession, space_id: UUID, user: User) -> Space:
+    """
+    IDOR guard for any API scoped by space_id.
+
+    ADMIN may access any active space. ORGANIZER / RESIDENT / GUARD must own the space.
+    """
+    return await _get_space(db, space_id, user)
+
+
 async def create_space(db: AsyncSession, data: CreateSpaceRequest, user: User) -> SpaceResponse:
     space = Space(owner_id=user.id, type=data.type, name=data.name, venue=data.venue,
                   start_time=data.start_time, end_time=data.end_time, address=data.address,

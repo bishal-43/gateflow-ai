@@ -11,6 +11,7 @@ Covers:
 import pytest
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from tests.helpers import auth_headers, create_space
 
 pytestmark = pytest.mark.asyncio
@@ -29,8 +30,8 @@ def _invite_payload(space_id: str) -> dict:
     }
 
 
-async def test_create_invite(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_create_invite(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
     resp = await client.post("/invites", json=_invite_payload(space["id"]), headers=headers)
     assert resp.status_code == 201
@@ -40,8 +41,8 @@ async def test_create_invite(client: AsyncClient):
     assert "invite_link" in data
 
 
-async def test_list_invites(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_list_invites(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
     await client.post("/invites", json=_invite_payload(space["id"]), headers=headers)
     resp = await client.get("/invites", headers=headers)
@@ -49,25 +50,25 @@ async def test_list_invites(client: AsyncClient):
     assert resp.json()["total"] >= 1
 
 
-async def test_get_invite_by_id(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_get_invite_by_id(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
     created = (await client.post("/invites", json=_invite_payload(space["id"]), headers=headers)).json()
     resp = await client.get(f"/invites/{created['invite_id']}", headers=headers)
     assert resp.status_code == 200
 
 
-async def test_revoke_invite(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_revoke_invite(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
     created = (await client.post("/invites", json=_invite_payload(space["id"]), headers=headers)).json()
     resp = await client.delete(f"/invites/{created['invite_id']}", headers=headers)
     assert resp.status_code == 204
 
 
-async def test_invite_invalid_ownership(client: AsyncClient):
+async def test_invite_invalid_ownership(client: AsyncClient, db: AsyncSession):
     """Another organizer cannot access someone else's invite."""
-    owner_headers = await auth_headers(client, "ORGANIZER")
+    owner_headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, owner_headers)
     created = (await client.post("/invites", json=_invite_payload(space["id"]), headers=owner_headers)).json()
 
@@ -76,7 +77,6 @@ async def test_invite_invalid_ownership(client: AsyncClient):
         "full_name": "Other User",
         "email":     "other@example.com",
         "password":  "testpassword123",
-        "role":      "ORGANIZER",
     })
     other_headers = {"Authorization": f"Bearer {other.json()['access_token']}"}
 

@@ -11,6 +11,7 @@ Covers:
 import pytest
 from datetime import datetime, timedelta, timezone
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from tests.helpers import auth_headers, create_space
 
 pytestmark = pytest.mark.asyncio
@@ -29,9 +30,9 @@ async def _create_invite(client, headers, space_id, valid_from=None, valid_until
     return resp.json()
 
 
-async def test_valid_entry_scan(client: AsyncClient):
-    org_headers   = await auth_headers(client, "ORGANIZER")
-    guard_headers = await auth_headers(client, "GUARD")
+async def test_valid_entry_scan(client: AsyncClient, db: AsyncSession):
+    org_headers   = await auth_headers(client, db, "ORGANIZER")
+    guard_headers = await auth_headers(client, db, "GUARD")
     space   = await create_space(client, org_headers)
     invite  = await _create_invite(client, org_headers, space["id"])
 
@@ -43,10 +44,10 @@ async def test_valid_entry_scan(client: AsyncClient):
     assert resp.json()["status"] == "ALLOWED"
 
 
-async def test_duplicate_entry_scan(client: AsyncClient):
+async def test_duplicate_entry_scan(client: AsyncClient, db: AsyncSession):
     """Scanning the same QR twice must be rejected."""
-    org_headers   = await auth_headers(client, "ORGANIZER")
-    guard_headers = await auth_headers(client, "GUARD")
+    org_headers   = await auth_headers(client, db, "ORGANIZER")
+    guard_headers = await auth_headers(client, db, "GUARD")
     space  = await create_space(client, org_headers)
     invite = await _create_invite(client, org_headers, space["id"])
 
@@ -55,10 +56,10 @@ async def test_duplicate_entry_scan(client: AsyncClient):
     assert resp.status_code == 400
 
 
-async def test_expired_qr_scan(client: AsyncClient):
+async def test_expired_qr_scan(client: AsyncClient, db: AsyncSession):
     """A QR whose valid_until is in the past must be rejected."""
-    org_headers   = await auth_headers(client, "ORGANIZER")
-    guard_headers = await auth_headers(client, "GUARD")
+    org_headers   = await auth_headers(client, db, "ORGANIZER")
+    guard_headers = await auth_headers(client, db, "GUARD")
     space  = await create_space(client, org_headers)
 
     past = datetime.now(timezone.utc) - timedelta(hours=2)
@@ -72,10 +73,10 @@ async def test_expired_qr_scan(client: AsyncClient):
     assert resp.status_code == 400
 
 
-async def test_revoked_qr_scan(client: AsyncClient):
+async def test_revoked_qr_scan(client: AsyncClient, db: AsyncSession):
     """Revoking an invite must prevent entry scan."""
-    org_headers   = await auth_headers(client, "ORGANIZER")
-    guard_headers = await auth_headers(client, "GUARD")
+    org_headers   = await auth_headers(client, db, "ORGANIZER")
+    guard_headers = await auth_headers(client, db, "GUARD")
     space  = await create_space(client, org_headers)
     invite = await _create_invite(client, org_headers, space["id"])
 
@@ -85,9 +86,9 @@ async def test_revoked_qr_scan(client: AsyncClient):
     assert resp.status_code == 400
 
 
-async def test_wrong_role_cannot_scan(client: AsyncClient):
+async def test_wrong_role_cannot_scan(client: AsyncClient, db: AsyncSession):
     """ORGANIZER role must not be able to scan entry (GUARD/ADMIN only)."""
-    org_headers = await auth_headers(client, "ORGANIZER")
+    org_headers = await auth_headers(client, db, "ORGANIZER")
     space  = await create_space(client, org_headers)
     invite = await _create_invite(client, org_headers, space["id"])
 

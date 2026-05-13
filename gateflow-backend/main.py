@@ -4,10 +4,15 @@ main.py — GateFlow AI entry point
 Start: uvicorn main:app --reload
 Docs:  http://localhost:8000/docs
 """
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from urllib.parse import unquote
+from uuid import UUID
+
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -87,25 +92,60 @@ app.include_router(overstay_router,     prefix="/overstay",      tags=["Overstay
 app.include_router(notification_router, prefix="/notifications", tags=["Notifications"])
 app.include_router(document_router,     prefix="/documents",     tags=["Documents"])
 
+# ── Static uploads (documents, walk-in proofs) ─────────────────────────────────
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("uploads/documents", exist_ok=True)
+os.makedirs("uploads/walkin", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 
 # ── WebSocket ──────────────────────────────────────────────────────────────────
 from websocket.dashboard_ws import manager
 
 @app.websocket("/ws/dashboard/{space_id}")
-async def dashboard_ws(space_id: str, ws: WebSocket):
+async def dashboard_ws(websocket: WebSocket, space_id: str):
     """
-    Live dashboard WebSocket.
-    Connect with: ws://host/ws/dashboard/<space_id>
-    Receives JSON events for ENTRY, EXIT, and WALKIN.
-    No auth on WS for simplicity — add token query param in production.
+    Live dashboard WebSocket (authenticated).
+
+    Connect with:
+      ws://host/ws/dashboard/<space_id>?token=<access_jwt>
+
+    ORGANIZER / RESIDENT: only spaces they own. ADMIN: any space.
     """
-    await manager.connect(space_id, ws)
+    raw = websocket.query_params.get("token") or websocket.query_params.get("access_token")
+    if not raw:
+        await websocket.close(code=1008)
+        return
+    token = unquote(raw).strip()
+    if not token:
+        await websocket.close(code=1008)
+        return
+
+    try:
+        sid = UUID(space_id)
+    except ValueError:
+        await websocket.close(code=1008)
+        return
+
+    from database import AsyncSessionLocal
+    from dependencies import user_from_access_token
+    from services.space_service import ensure_space_access
+
+    async with AsyncSessionLocal() as db:
+        try:
+            user = await user_from_access_token(db, token)
+            await ensure_space_access(db, sid, user)
+        except HTTPException:
+            await websocket.close(code=1008)
+            return
+
+    sid_str = str(sid)
+    await manager.connect(sid_str, websocket)
     try:
         while True:
-            # Keep connection alive; we only send, never receive
-            await ws.receive_text()
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        manager.disconnect(space_id, ws)
+        manager.disconnect(sid_str, websocket)
 
 
 # ── Health ─────────────────────────────────────────────────────────────────────

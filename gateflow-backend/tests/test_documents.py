@@ -11,6 +11,7 @@ Covers:
 import io
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 from tests.helpers import auth_headers, create_space
 
 pytestmark = pytest.mark.asyncio
@@ -18,8 +19,8 @@ pytestmark = pytest.mark.asyncio
 _SMALL_PDF = b"%PDF-1.4 small test pdf"   # minimal fake PDF bytes
 
 
-async def test_upload_valid_pdf(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_upload_valid_pdf(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
 
     resp = await client.post(
@@ -33,9 +34,9 @@ async def test_upload_valid_pdf(client: AsyncClient):
     assert data["file_size"] == len(_SMALL_PDF)
 
 
-async def test_upload_invalid_file_type(client: AsyncClient):
+async def test_upload_invalid_file_type(client: AsyncClient, db: AsyncSession):
     """Uploading a non-PDF must return 400."""
-    headers = await auth_headers(client, "ORGANIZER")
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
 
     resp = await client.post(
@@ -46,9 +47,9 @@ async def test_upload_invalid_file_type(client: AsyncClient):
     assert resp.status_code == 400
 
 
-async def test_upload_oversized_file(client: AsyncClient):
+async def test_upload_oversized_file(client: AsyncClient, db: AsyncSession):
     """A file larger than 20 MB must return 400."""
-    headers = await auth_headers(client, "ORGANIZER")
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
 
     big_content = b"A" * (21 * 1024 * 1024)  # 21 MB
@@ -60,8 +61,8 @@ async def test_upload_oversized_file(client: AsyncClient):
     assert resp.status_code == 400
 
 
-async def test_list_documents(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_list_documents(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
 
     await client.post(
@@ -75,8 +76,8 @@ async def test_list_documents(client: AsyncClient):
     assert resp.json()["total"] == 1
 
 
-async def test_delete_document(client: AsyncClient):
-    headers = await auth_headers(client, "ORGANIZER")
+async def test_delete_document(client: AsyncClient, db: AsyncSession):
+    headers = await auth_headers(client, db, "ORGANIZER")
     space   = await create_space(client, headers)
 
     upload = await client.post(

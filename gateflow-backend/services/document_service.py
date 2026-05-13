@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.document import Document
 from models.user import User
 from schemas.document import DocumentListResponse, DocumentResponse
+from services.space_service import ensure_space_access
 from utils.logger import logger
 
 _UPLOAD_DIR  = "uploads/documents"
@@ -63,6 +64,7 @@ def _save_file(file: UploadFile) -> tuple[str, int]:
 
 
 async def upload_document(db: AsyncSession, space_id: UUID, file: UploadFile, user: User) -> DocumentResponse:
+    await ensure_space_access(db, space_id, user)
     _validate_file(file)
     file_path, file_size = _save_file(file)
 
@@ -78,7 +80,8 @@ async def upload_document(db: AsyncSession, space_id: UUID, file: UploadFile, us
     return _to_resp(doc)
 
 
-async def list_documents(db: AsyncSession, space_id: UUID) -> DocumentListResponse:
+async def list_documents(db: AsyncSession, space_id: UUID, user: User) -> DocumentListResponse:
+    await ensure_space_access(db, space_id, user)
     rows = (await db.execute(
         select(Document)
         .where(Document.space_id == space_id)
@@ -92,6 +95,8 @@ async def delete_document(db: AsyncSession, doc_id: UUID, user: User) -> None:
     doc = await db.get(Document, doc_id)
     if doc is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
+
+    await ensure_space_access(db, doc.space_id, user)
 
     # Remove physical file first, then DB row
     if os.path.exists(doc.file_path):

@@ -19,10 +19,25 @@ from utils.logger import logger
 _INVITE_BASE_URL = "https://gateflow.ai/invite"
 
 
-def generate_invite_token(invite_id: str, space_id: str, invite_type: InviteType, valid_until: datetime) -> str:
-    payload: dict[str, Any] = {"invite_id": invite_id, "space_id": space_id,
-                                "invite_type": invite_type.value, "role": "visitor",
-                                "exp": valid_until, "iat": datetime.now(timezone.utc)}
+def generate_invite_token(
+    invite_id: str,
+    space_id: str,
+    invite_type: InviteType,
+    valid_from: datetime,
+    valid_until: datetime,
+) -> str:
+    vf = valid_from if valid_from.tzinfo else valid_from.replace(tzinfo=timezone.utc)
+    vu = valid_until if valid_until.tzinfo else valid_until.replace(tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
+    payload: dict[str, Any] = {
+        "invite_id": invite_id,
+        "space_id": space_id,
+        "invite_type": invite_type.value,
+        "role": "visitor",
+        "nbf": vf,
+        "exp": vu,
+        "iat": now,
+    }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 
@@ -66,7 +81,9 @@ async def _get_invite(db: AsyncSession, invite_id: UUID, user: User) -> Invite:
 async def create_invite(db: AsyncSession, data: CreateInviteRequest, user: User) -> InviteCreatedResponse:
     await _get_space(db, data.space_id, user)
     invite_id = uuid.uuid4()
-    invite_token = generate_invite_token(str(invite_id), str(data.space_id), data.invite_type, data.valid_until)
+    invite_token = generate_invite_token(
+        str(invite_id), str(data.space_id), data.invite_type, data.valid_from, data.valid_until,
+    )
     qr_token = generate_qr_token()
     invite = Invite(id=invite_id, space_id=data.space_id, created_by=user.id,
                     visitor_name=data.visitor_name, visitor_email=data.visitor_email,
