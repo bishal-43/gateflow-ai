@@ -1,0 +1,27 @@
+
+services:
+
+  ai-service:
+    build: ./ai-service
+    container_name: gateflow-ai-service
+    ports:
+      - "8001:8001"
+
+    env_file:
+      - .env
+
+    restart: always
+
+    depends_on:
+      - redis
+
+    volumes:
+      - ./uploads:/app/uploads
+
+  redis:
+    image: redis:7
+    container_name: gateflow-redis
+    ports:
+      - "6379:6379"
+
+    restart: always
