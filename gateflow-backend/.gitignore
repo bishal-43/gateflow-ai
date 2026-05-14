@@ -1,0 +1,55 @@
+# ── Python ────────────────────────────────────
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# ── Virtual environments ──────────────────────
+venv/
+.venv/
+env/
+
+# ── Environment variables ─────────────────────
+# Never commit secrets — copy .env.example to .env and fill in values
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ── Logs ──────────────────────────────────────
+# Keep the logs/ folder (via .gitkeep), ignore actual log files
+logs/
+logs/*.log
+*.log
+
+# ── Uploads ───────────────────────────────────
+# Keep the uploads/ folder (via .gitkeep), ignore uploaded files
+uploads/*
+!uploads/.gitkeep
+
+# ── Database files ────────────────────────────
+*.db
+*.sqlite3
+
+# ── IDE ───────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS ────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Testing ───────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Build artifacts ───────────────────────────
+build/
+dist/
+*.egg-info/
